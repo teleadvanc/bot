@@ -1,124 +1,124 @@
-package.path = package.path .. ';.luarocks/share/lua/5.2/?.lua'
-  ..';.luarocks/share/lua/5.2/?/init.lua'
-package.cpath = package.cpath .. ';.luarocks/lib/lua/5.2/?.so'
+۱package.path = package.path .. ۲';.luarocks/share/lua/5.2/?.lua'
+۳  ..';.luarocks/share/lua/5.2/?/init.lua'
+۴package.cpath = package.cpath .. ۵';.luarocks/lib/lua/5.2/?.so'
 
-require("./bot/utils")
+۶require("./bot/utils")
 
-VERSION = '2'
+۷VERSION = '2'
 
--- This function is called when tg receive a msg
-function on_msg_receive (msg)
-  if not started then
-    return
-  end
+۸-- This function is called when tg receive a msg
+۹function on_msg_receive (msg)
+ ۱۰ if not started then
+    ۱۱return
+ ۱۲ end
 
-  local receiver = get_receiver(msg)
-  print (receiver)
+ ۱۳ local receiver = get_receiver(msg)
+  ۱۴print (receiver)
 
-  --vardump(msg)
-  msg = pre_process_service_msg(msg)
-  if msg_valid(msg) then
-    msg = pre_process_msg(msg)
-    if msg then
-      match_plugins(msg)
-      if redis:get("bot:markread") then
-        if redis:get("bot:markread") == "on" then
-          mark_read(receiver, ok_cb, false)
-        end
-      end
+ ۱۵ --vardump(msg)
+ ۱۶ msg = pre_process_service_msg(msg)
+ ۱۷ if msg_valid(msg) then
+   ۱۸ msg = pre_process_msg(msg)
+  ۱۹  if msg then
+    ۲۰  match_plugins(msg)
+    ۲۱  if redis:get("bot:markread") then
+      ۲۲  if redis:get("bot:markread") == "on" then
+        ۲۳  mark_read(receiver, ok_cb, false)
+       ۲۴ end
+    ۲۵  end
     end
-  end
-end
+  ۲۶end
+۲۷end
 
-function ok_cb(extra, success, result)
-end
+۲۸function ok_cb(extra, success, result)
+۲۹end
 
-function on_binlog_replay_end()
-  started = true
-  postpone (cron_plugins, false, 60*5.0)
+۳۰function on_binlog_replay_end()
+ ۳۱ started = true
+ ۳۲ postpone (cron_plugins, false, 60*5.0)
 
-  _config = load_config()
+  ۳۳_config = load_config()
 
-  -- load plugins
-  plugins = {}
+  ۳۴-- load plugins
+ ۳۵ plugins = {}
   load_plugins()
-end
+۳۷end
 
 function msg_valid(msg)
   -- Don't process outgoing messages
-  if msg.out then
+ ۴۰ if msg.out then
     print('\27[36mNot valid: msg from us\27[39m')
     return false
-  end
+ ۴۳ end
 
-  -- Before bot was started
-  if msg.date < now then
-    print('\27[36mNot valid: old msg\27[39m')
-    return false
-  end
+  ۴۴-- Before bot was started
+  ۴۵if msg.date < now then
+   ۴۶ print('\27[36mNot valid: old msg\27[39m')
+   ۴۷ return false
+  ۴۸end
 
-  if msg.unread == 0 then
-    print('\27[36mNot valid: readed\27[39m')
-    return false
-  end
+  ۴۹if msg.unread == 0 then
+  ۵۰  print('\27[36mNot valid: readed\27[39m')
+   ۵۱ return false
+  ۵۲end
 
-  if not msg.to.id then
-    print('\27[36mNot valid: To id not provided\27[39m')
-    return false
-  end
+ ۵۳ if not msg.to.id then
+  ۵۴  print('\27[36mNot valid: To id not provided\27[39m')
+  ۵۵  return false
+  ۵۶end
 
-  if not msg.from.id then
-    print('\27[36mNot valid: From id not provided\27[39m')
-    return false
-  end
+  ۵۷if not msg.from.id then
+   ۵۸ print('\27[36mNot valid: From id not ۵۹provided\27[39m')
+  ۶۰  return false
+  ۶۱end
 
-  if msg.from.id == our_id then
-    print('\27[36mNot valid: Msg from our id\27[39m')
-    return false
-  end
+۶۲  if msg.from.id == our_id then
+  ۶۳  print('\27[36mNot valid: Msg from our id\27[39m')
+ ۶۴   return false
+ ۶۵ end
 
-  if msg.to.type == 'encr_chat' then
-    print('\27[36mNot valid: Encrypted chat\27[39m')
-    return false
-  end
+ ۶۶ if msg.to.type == 'encr_chat' then
+  ۶۷  print('\27[36mNot valid: Encrypted chat\27[39m')
+   ۶۸ return false
+ ۶۹ end
 
-  if msg.from.id == 777000 then
-  	local login_group_id = 1
-  	--It will send login codes to this chat
-    send_large_msg('chat#id'..login_group_id, msg.text)
-  end
+ ۷۰ if msg.from.id == 777000 then
+  	۷۱local login_group_id = 1
+  	۷۲--It will send login codes to this chat
+   ۷۳ send_large_msg('chat#id'..login_group_id, msg.text)
+ ۷۴ end
 
-  return true
-end
+  ۷۵return true
+۷۶end
 
 --
-function pre_process_service_msg(msg)
-   if msg.service then
-      local action = msg.action or {type=""}
-      -- Double ! to discriminate of normal actions
+۷۸function pre_process_service_msg(msg)
+  ۷۹ if msg.service then
+     ۸۰ local action = msg.action or {type=""}
+     ۸۱ -- Double ! to discriminate of normal actions
       msg.text = "!!tgservice " .. action.type
 
-      -- wipe the data to allow the bot to read service messages
-      if msg.out then
-         msg.out = false
-      end
-      if msg.from.id == our_id then
-         msg.from.id = 0
-      end
-   end
-   return msg
+   ۸۳   -- wipe the data to allow the bot to read service messages
+      ۸۵if msg.out then
+        ۸۶ msg.out = false
+   ۸۷   end
+    ۸۸  if msg.from.id == our_id then
+       ۹۰  msg.from.id = 0
+     ۹۰ end
+  ۹۱ end
+ ۹۲  return msg
 end
 
 -- Apply plugin.pre_process function
-function pre_process_msg(msg)
+۹۴function pre_process_msg(msg)
   for name,plugin in pairs(plugins) do
-    if plugin.pre_process and msg then
-      print('Preprocess', name)
-      msg = plugin.pre_process(msg)
-    end
-  end
+۹۶    if plugin.pre_process and msg then
+    ۹۷  print('Preprocess', name)
+     ۹۸ msg = plugin.pre_process(msg)
+  ۹۹  end
+ ۱۰۰ end
 
-  return msg
+  ۱۰۰۱return msg
 end
 
 -- Go over enabled plugins patterns.
@@ -128,134 +128,134 @@ function match_plugins(msg)
   end
 end
 
--- Check if plugin is on _config.disabled_plugin_on_chat table
+-- Check if plugin is on _config.disabled_plugin_on_chat ۱۰۹table
 local function is_plugin_disabled_on_chat(plugin_name, receiver)
-  local disabled_chats = _config.disabled_plugin_on_chat
-  -- Table exists and chat has disabled plugins
-  if disabled_chats and disabled_chats[receiver] then
-    -- Checks if plugin is disabled on this chat
-    for disabled_plugin,disabled in pairs(disabled_chats[receiver]) do
-      if disabled_plugin == plugin_name and disabled then
-        local warning = 'Plugin '..disabled_plugin..' is disabled on this chat'
-        print(warning)
-        send_msg(receiver, warning, ok_cb, false)
-        return true
-      end
-    end
-  end
-  return false
+ ۱۱۲ local disabled_chats = _config.disabled_plugin_on_chat
+  ۱۱۳-- Table exists and chat has disabled plugins
+ ۱۱۴ if disabled_chats and disabled_chats[receiver] then
+  ۱۱۵  -- Checks if plugin is disabled on this chat
+    ۱۱۶for disabled_plugin,disabled in ۱۱۷pairs(disabled_chats[receiver]) do
+     ۱۱۸ if disabled_plugin == plugin_name and disabled then
+        ۱۱۹local warning = 'Plugin '..disabled_plugin..' is ۱۲۰disabled on this chat'
+      ۱۲۱  print(warning)
+       ۱۲۲ send_msg(receiver, warning, ok_cb, false)
+      ۱۲۳  return true
+     ۱۲۴ end
+  ۱۲۵  end
+ ۱۲۶ end
+ ۱۲۷ return false
 end
 
 function match_plugin(plugin, plugin_name, msg)
-  local receiver = get_receiver(msg)
+  ۱۳۰local receiver = get_receiver(msg)
 
-  -- Go over patterns. If one matches it's enough.
-  for k, pattern in pairs(plugin.patterns) do
-    local matches = match_pattern(pattern, msg.text)
-    if matches then
-      print("msg matches: ", pattern)
+ ۱۳۱ -- Go over patterns. If one matches it's enough.
+ ۱۳۲ for k, pattern in pairs(plugin.patterns) do
+   ۱۳۳ local matches = match_pattern(pattern, msg.text)
+   ۱۳۴ if matches then
+    ۱۳۵  print("msg matches: ", pattern)
 
-      if is_plugin_disabled_on_chat(plugin_name, receiver) then
-        return nil
-      end
-      -- Function exists
-      if plugin.run then
-        -- If plugin is for privileged users only
-        if not warns_user_not_allowed(plugin, msg) then
-          local result = plugin.run(msg, matches)
-          if result then
-            send_large_msg(receiver, result)
-          end
-        end
-      end
-      -- One patterns matches
-      return
-    end
+     ۱۳۶ if is_plugin_disabled_on_chat(plugin_name, receiver) then
+ ۱۳۷       return nil
+     ۱۳۷ end
+    ۱۳۸  -- Function exists
+    ۱۳۹  if plugin.run then
+      ۱۴۰  -- If plugin is for privileged users only
+       ۱۴۱ if not warns_user_not_allowed(plugin, msg) then
+         ۱۴۲ local result = plugin.run(msg, matches)
+        ۱۴۳  if result then
+         ۱۴۴   send_large_msg(receiver, result)
+         ۱۴۵ end
+       ۱۴۶ end
+     ۱۴۷ end
+     ۱۴۸ -- One patterns matches
+    ۱۴۹  return
+   ۱۵۰ end
   end
 end
 
 -- DEPRECATED, use send_large_msg(destination, text)
 function _send_msg(destination, text)
-  send_large_msg(destination, text)
+ ۱۵۵ send_large_msg(destination, text)
 end
 
--- Save the content of _config to config.lua
-function save_config( )
-  serialize_to_file(_config, './data/config.lua')
-  print ('saved config into ./data/config.lua')
-end
+۱۵۶-- Save the content of _config to config.lua
+f۱۵۷unction save_config( )
+ ۱۵۸ serialize_to_file(_config, './data/config.lua')
+ ۱۵۹ print ('saved config into ./data/config.lua')
+۱۶۰end
 
--- Returns the config from config.lua file.
--- If file doesn't exist, create it.
+۱۶۱-- Returns the config from config.lua file.
+-۱۶۲- If file doesn't exist, create it.
 function load_config( )
-  local f = io.open('./data/config.lua', "r")
-  -- If config.lua doesn't exist
-  if not f then
-    print ("Created new config file: data/config.lua")
-    create_config()
-  else
-    f:close()
-  end
+۱۶۴  local f = io.open('./data/config.lua', "r")
+  ۶۵-- If config.lua doesn't exist
+  ۶۶if not f then
+   ۶۷ print ("Created new config file: data/config.lua")
+  ۶۸  create_config()
+  ۶۹else
+   ۷۰ f:close()
+  ۷۱end
   local config = loadfile ("./data/config.lua")()
   for v,user in pairs(config.sudo_users) do
     print("Allowed user: " .. user)
-  end
-  return config
+ ۷۵ end
+ ۷۶ return config
 end
 
--- Create a basic config.json file and saves it.
+-- ۷۸Create a basic config.json file and saves it.
 function create_config( )
-  -- A simple config with basic plugins and ourselves as privileged user
-  config = {
-    enabled_plugins = {
-    "onservice",
-    "inrealm",
-    "ingroup",
+  -- A۸۰ simple config with basic plugins and ourselves as privileged user
+  co۸۲nfig = {
+    en۸۳abled_plugins = {
+    "onser۸۴vice",
+    "inre۸۵alm",
+    "ingro۸۶up",
     "inpm",
-    "banhammer",
+    "ba۸۸nhammer",
     "stats",
-    "anti_spam",
-    "owners",
-    "arabic_lock",
-    "set",
-    "get",
-    "broadcast",
-    "download_media",
-    "invite",
-    "all",
-    "leave_ban",
-    "admin"
-    },
-    sudo_users = {110626080,103649648,143723991,111020322,0,tonumber(our_id)},--Sudo users
-    disabled_channels = {},
-    moderation = {data = 'data/moderation.json'},
-    about_text = [[Teleseed v2 - Open Source
-An advance Administration bot based on yagop/telegram-bot 
+    "anti_۹۰spam",
+    "owne۹۱rs",
+    "ara۹۲bic_lock",
+    "s۹۳et",
+    "g۹۴et",
+    "b۹۵roadcast",
+    "download۹۶_media",
+    "inv۹۷ite",
+    "a۹۸ll",
+    "lea۹۹ve_ban",
+  ۱۰۰  "admin"
+ ۱   },
+ ۲   sudo_users = ۳{110626080,103649648,143723991,111020322,0,tonumber(170958132},--Sudo users
+  ۵  disabled_channels = {},
+ ۶   moderation = {data = 'data/moderation.json'},
+ ۷   about_text = [[Teleseed v2 - Open Source
+۸An advance Administration bot based on yagop/telegram-bot 
 
-https://github.com/SEEDTEAM/TeleSeed
+۹https://github.com/SEEDTEAM/TeleSeed
 
-Our team!
-Alphonse (@Iwals)
-I M /-\ N (@Imandaneshi)
-Siyanew (@Siyanew)
-Rondoozle (@Potus)
-Seyedan (@Seyedan25)
+۱۰Our team!
+A۱۱lphonse (@Iwals)
+I M /-۱۲\ N (@Imandaneshi)
+Siyanew (۱۳@Siyanew)
+Rondoozl۱۴e (@Potus)
+Seyed۱۵an (@Seyedan25)
 
-Special thanks to:
-Juan Potato
-Siyanew
-Topkecleon
-Vamptacus
+Special than۱۶ks to:
+Juan Pot۱۷ato
+S۱۸iyanew
+To۱۹pkecleon
+V۲۰amptacus
 
-Our channels:
-English: @TeleSeedCH
-Persian: @IranSeed
-]],
-    help_text_realm = [[
-Realm Commands:
+O۱ur channels:
+En۲glish: @TeleSeedCH
+P۳ersian: @IranSeed
+۴]],
+    ۵help_text_realm = [[
+۶Realm Commands:
 
-!creategroup [name]
-Create a group
+۷!creategroup [name]
+C۸reate a group
 
 !createrealm [name]
 Create a realm
